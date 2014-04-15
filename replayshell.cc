@@ -126,28 +126,29 @@ int main( int argc, char *argv[] )
         set< string > unique_ips;
         vector< WebServer > servers;
 
-        unsigned int interface_counter = 0;
+        Address only_address, only_address_ssl;
+
+        FileDescriptor first_response( SystemCall( "open", open( files[0].c_str(), O_RDONLY ) ) );
+        HTTP_Record::reqrespair first_record;
+        first_record.ParseFromFileDescriptor( first_response.num() );
+
+        only_address = Address( first_record.ip(), 80 );
+        only_address_ssl = Address( first_record.ip(), 443 );
+        add_dummy_interface( "sharded0", only_address );
+
 
         for ( unsigned int i = 0; i < files.size(); i++ ) {
             FileDescriptor response( SystemCall( "open", open( files[i].c_str(), O_RDONLY ) ) );
             HTTP_Record::reqrespair current_record;
             current_record.ParseFromFileDescriptor( response.num() );
-            Address current_addr( current_record.ip(), current_record.port() );
-            auto result1 = unique_ips.emplace( current_addr.ip() );
-            if ( result1.second ) { /* new ip */
-                add_dummy_interface( "sharded" + to_string( interface_counter ), current_addr );
-                interface_counter++;
-            }
 
             /* add entry to dnsmasq host mapping file */
             string entry_host = get_host( current_record );
-            dnsmasq_hosts.write( current_addr.ip() + " " +entry_host + "\n" );
-
-            auto result2 = unique_addrs.emplace( current_addr );
-            if ( result2.second ) { /* new address */
-                servers.emplace_back( current_addr, directory, user );
-            }
+            dnsmasq_hosts.write( only_address.ip() + " " + entry_host + "\n" );
         }
+
+        servers.emplace_back( only_address, directory, user );
+        servers.emplace_back( only_address_ssl, directory, user );
 
         vector<ChildProcess> child_processes;
 
