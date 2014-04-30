@@ -40,6 +40,8 @@ public:
     void write_packets( FileDescriptor & fd );
 
     unsigned int wait_time( void ) const;
+
+    QueuedPacket dequeue_packet( void );
 };
 
 #endif /* LINK_QUEUE_HH */
