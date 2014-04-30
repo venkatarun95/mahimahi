@@ -14,4 +14,4 @@ struct QueuedPacket
     static QueuedPacket nullpkt() { return QueuedPacket( "" ); };
 };
 
-#endif /* QUEUED_PACKET_HH */ 
+#endif /* QUEUED_PACKET_HH */

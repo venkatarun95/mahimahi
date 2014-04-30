@@ -1,7 +1,5 @@
-#include <net/ethernet.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
-#include <netinet/udp.h>
 
 #include "pkt_classifier.hh"
 
@@ -53,7 +51,8 @@ extern "C" {
   c ^= b; c -= rot(b,24); \
 }
 
-static inline u_int32_t jhash_3words( u_int32_t a, u_int32_t b, u_int32_t c, u_int32_t i) {
+static inline u_int32_t jhash_3words( u_int32_t a, u_int32_t b, u_int32_t c, u_int32_t i )
+{
     i += 0xdeadbeef + (3 << 2);
     a += i;
     b += i;
@@ -72,8 +71,7 @@ uint64_t PktClassifier::get_flow_id( const std::string & packet_str )
 {
   /* Seek to the beginning of the IP header */
   const char* packet = packet_str.c_str();
-  const struct ip* ip_hdr;
-  ip_hdr = ( struct ip* ) ( packet + 4 );
+  const struct ip* ip_hdr = reinterpret_cast< const struct ip* >( packet + P2P_HDR_SIZE );
   unsigned char protocol = ip_hdr->ip_p;
 
   /* Get ip source and destination address */
@@ -81,12 +79,12 @@ uint64_t PktClassifier::get_flow_id( const std::string & packet_str )
   uint32_t dst_addr = ntohl( ip_hdr->ip_dst.s_addr );
 
   /* Get TCP src port and dst port */
-  const struct tcphdr* tcp_hdr = (struct tcphdr*) (packet + sizeof( struct ip ) + 4);
+  const struct tcphdr* tcp_hdr = reinterpret_cast< const struct tcphdr* >( packet + P2P_HDR_SIZE + sizeof( struct ip ) );
   uint16_t sport = ntohs( tcp_hdr -> source );
   uint16_t dport = ntohs( tcp_hdr -> dest );
 
   unsigned int hash = jhash_3words( protocol, src_addr, dst_addr, sport * dport );
 
-  printf("protocol type is %u, saddr is %u, daddr is %u, sport is %u, dport is %u, size is %lu, hash is %u\n", protocol, src_addr, dst_addr, sport, dport, packet_str.size(), hash );
+//  printf("protocol type is %u, saddr is %u, daddr is %u, sport is %u, dport is %u, size is %lu, hash is %u\n", protocol, src_addr, dst_addr, sport, dport, packet_str.size(), hash );
   return hash;
 }

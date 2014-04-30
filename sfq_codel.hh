@@ -18,28 +18,28 @@ private:
     } dodeque_result;
 
     /* Hash from packet to flow */
-    uint64_t hash(const std::string & contents) const;
+    uint64_t hash( const std::string & contents ) const;
 
     /* sfq - Initialization */
-    void init_bin(uint64_t bin_id);
+    void init_bin( const uint64_t & bin_id );
 
     /* sfq - purging */
-    void remove_bin(uint64_t bin_id);
+    void remove_bin( const uint64_t & bin_id );
 
     /* sfq - next flow in cyclic order */
-    uint64_t next_bin(void);
+    uint64_t next_bin( void );
 
     /* sfq - helper functions */
-    void enqueue_packet(QueuedPacket p, uint64_t bin_id);
+    void enqueue_packet( const QueuedPacket & p, const uint64_t & bin_id );
 
     /* Codel - control rule */
-    uint64_t control_law (uint64_t t, uint32_t count) const { return t + interval/sqrt(count);}
+    uint64_t control_law( const uint64_t & t, const uint32_t & count ) const { return t + interval/sqrt( count );}
 
     /* Main codel routines */
-    QueuedPacket  codel_deq_helper(uint64_t bin_id);
-    dodeque_result    codel_dodeque(uint64_t bin_id);
-    QueuedPacket       codel_deque(uint64_t bin_id);
-    void drop(QueuedPacket p, uint64_t bin_id);
+    QueuedPacket codel_deq_helper( const uint64_t & bin_id );
+    dodeque_result codel_dodeque( const uint64_t & bin_id );
+    QueuedPacket codel_deque( const uint64_t & bin_id );
+    void drop( const QueuedPacket & p, const uint64_t & bin_id );
 
     /* MTU Size */
     static const uint32_t MTU_SIZE = 1514;
