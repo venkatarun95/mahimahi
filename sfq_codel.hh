@@ -1,6 +1,7 @@
 #ifndef SFQ_CODEL_HH
 #define SFQ_CODEL_HH
 
+#include <cmath>
 #include <string>
 #include <queue>
 #include <map>
@@ -17,7 +18,7 @@ private:
     } dodeque_result;
 
     /* Hash from packet to flow */
-    uint64_t hash(const string & contents) const;
+    uint64_t hash(const std::string & contents) const;
 
     /* sfq - Initialization */
     void init_bin(uint64_t bin_id);
@@ -29,7 +30,7 @@ private:
     uint64_t next_bin(void);
 
     /* sfq - helper functions */
-    void enque_packet(QueuedPacket p, uint64_t bin_id);
+    void enqueue_packet(QueuedPacket p, uint64_t bin_id);
 
     /* Codel - control rule */
     uint64_t control_law (uint64_t t, uint32_t count) const { return t + interval/sqrt(count);}
@@ -51,8 +52,8 @@ private:
     std::map<uint64_t, bool> active_indicator_;
 
     /* Codel - specific parameters */
-    static const uint64_t    target=5 ;    /* 5   ms as per the spec */
-    static const uint64_t  interval=100;   /* 100 ms as per the spec */
+    static const uint64_t    target = 5 ;    /* 5   ms as per the spec */
+    static const uint64_t  interval = 100;   /* 100 ms as per the spec */
 
     /* Codel - specific tracker variables */
     std::map<uint64_t, uint64_t> first_above_time_;
