@@ -46,14 +46,9 @@ LinkQueue::LinkQueue( const std::string & filename )
     }
 }
 
-LinkQueue::QueuedPacket::QueuedPacket( const std::string & s_contents )
-    : bytes_to_transmit( s_contents.size() ),
-      contents( s_contents )
-{}
-
 void LinkQueue::read_packet( const string & contents )
 {
-    packet_queue_.emplace( contents );
+    packet_queue_.enqueue( contents );
 }
 
 uint64_t LinkQueue::next_delivery_time( void ) const
@@ -90,7 +85,7 @@ void LinkQueue::write_packets( FileDescriptor & fd )
                 bytes_left_in_this_delivery += (- packet_queue_.front().bytes_to_transmit);
 
                 /* this packet is ready to go */
-                fd.write( dequeue_packet().contents );
+                fd.write( packet_queue_.dequeue().contents );
             }
         }
     }
@@ -109,12 +104,4 @@ unsigned int LinkQueue::wait_time( void ) const
     } else {
         return next_delivery_time() - now;
     }
-}
-
-LinkQueue::QueuedPacket LinkQueue::dequeue_packet( void )
-{
-    assert( not packet_queue_.empty() );
-    auto ret = packet_queue_.front();
-    packet_queue_.pop();
-    return ret;
 }
