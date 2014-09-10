@@ -40,30 +40,18 @@ string make_phantomjs_script( const MahimahiProtobufs::BulkRequest & incoming_re
     /* Now concatenate the components into one URL */
     string url = scheme + "://" + hostname + path;
 
-    /* Populate HTTP headers as per incoming_request */
-    string custom_headers = "page.customHeaders = {";
-    string user_agent_header = "page.settings.userAgent = '";
-    for ( const auto &x : incoming_request.request().header() ) {
-        HTTPHeader http_header( x );
-        if ( HTTPMessage::equivalent_strings( http_header.key(), "User-Agent" ) ) {
-            user_agent_header += http_header.value();
-        } else {
-            if ( not HTTPMessage::equivalent_strings( http_header.key(), "Content-Length" ) ) {
-                custom_headers += "'" + http_header.key() + "' : '" + http_header.value() + "',";
-            }
-        }
-    }
-    user_agent_header.append( "';\n" );
-    custom_headers.append( "};\n" );
-
     string data = incoming_request.request().body();
 
     if ( curr_request.first_line().find( "POST" ) != string::npos ) {
-        cout << ( "data = '" + data + "';\nurl = '" + url + "';\n" + phantomjs_setup + user_agent_header + custom_headers + phantomjs_load_post ) << endl;
-        return( "data = '" + data + "';\nurl = '" + url + "';\n" + phantomjs_setup + user_agent_header + custom_headers + phantomjs_load_post );
+        string custom_headers = "";
+        if ( curr_request.has_header( "Cookie" ) ) {
+            custom_headers = "page.customHeaders = { 'Cookie': '" + curr_request.get_header_value( "Cookie" ) + "' };\n";
+        }
+        cout << ( "data = '" + data + "';\nurl = '" + url + "';\n" + phantomjs_setup + custom_headers + phantomjs_load_post ) << endl;
+        return( "data = '" + data + "';\nurl = '" + url + "';\n" + phantomjs_setup + custom_headers + phantomjs_load_post );
     } else {
-        cout << ( "url = '" + url + "';\n" + phantomjs_setup + user_agent_header + custom_headers + phantomjs_load ) << endl;
-        return( "url = '" + url + "';\n" + phantomjs_setup + user_agent_header + custom_headers + phantomjs_load );
+        cout << ( "url = '" + url + "';\n" + phantomjs_setup + phantomjs_load ) << endl;
+        return( "url = '" + url + "';\n" + phantomjs_setup + phantomjs_load );
     }
 }
 
