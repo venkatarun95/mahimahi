@@ -21,10 +21,20 @@ using namespace PollerShortNames;
 LocalProxy::LocalProxy( const Address & listener_addr, const Address & remote_proxy )
     : listener_socket_( TCP ),
       remote_proxy_addr_( remote_proxy ),
-      archive()
+      archive(),
+      bulk_done( false ),
+      req_sent( false ),
+      mutex_(),
+      cv_()
 {
     listener_socket_.bind( listener_addr );
     listener_socket_.listen();
+}
+
+void LocalProxy::wait( void )
+{
+    unique_lock<mutex> pending_lock( mutex_ );
+    cv_.wait( pending_lock );
 }
 
 string make_bulk_request( const HTTPRequest & request, const string & scheme )
@@ -78,11 +88,15 @@ void LocalProxy::handle_new_requests( Poller & client_poller, HTTPRequestParser 
     while ( ( not request_parser.empty() ) and ( not cannot_handle ) ) {
         auto new_req_status = archive.find_request( request_parser.front().toprotobuf(), false );
         if ( new_req_status.first and ( new_req_status.second != "" ) ) { /* we have new request on same thread */
-            //cout << "WROTE RESPONSE FOR: " << request_parser.front().first_line() << " AT: " << timestamp() << endl;
             client.write( new_req_status.second );
             request_parser.pop();
         } else {
-            cannot_handle = true;
+            if ( bulk_done ) {
+                client.write( "HTTP/1.1 200 OK\r\nContent-Type: Text/html\r\nConnection: close\r\nContent-Length: 24\r\n\r\nCOULD NOT FIND AN OBJECT" );
+                request_parser.pop();
+            } else {
+                cannot_handle = true;
+            }
         }
     }
 }
@@ -93,15 +107,20 @@ bool LocalProxy::get_response( const HTTPRequest & new_request, const string & s
 {
     //cout << "INCOMING REQUEST: " << new_request.first_line() << "AT: " << timestamp() << endl;
 
-    /* check if request and response are in the archive */
-    auto to_send = archive.find_request( new_request.toprotobuf(), false );
-    if ( to_send.first ) {
-        while ( to_send.second == "" ) { /* response is pending */
-            archive.wait();
-            to_send = archive.find_request( new_request.toprotobuf(), false );
+    if ( req_sent ) { /* must send at least one request to remote proxy! */
+        if ( not bulk_done ) { /* requests not back yet, so wait for them */
+            wait();
         }
-        //cout << "WROTE RESPONSE FOR: " << new_request.first_line() << " AT: " << timestamp() << endl;
-        client.write( to_send.second );
+        auto final_check = archive.find_request( new_request.toprotobuf(), false );
+        if ( final_check.first ) { /* we have or will have a response */
+            while ( final_check.second == "" ) {
+                archive.wait();
+                final_check = archive.find_request( new_request.toprotobuf(), false );
+            }
+            client.write( final_check.second );
+        } else {
+            client.write( "HTTP/1.1 200 OK\r\nContent-Type: Text/html\r\nConnection: close\r\nContent-Length: 24\r\n\r\nCOULD NOT FIND AN OBJECT" );
+        }
         request_parser.pop();
         return false;
     }
@@ -143,6 +162,7 @@ bool LocalProxy::get_response( const HTTPRequest & new_request, const string & s
     server_poller.add_action( Poller::Action( server, Direction::Out,
                                        [&] () {
                                            server.write( make_bulk_request( new_request , scheme ) );
+                                           req_sent = true;
                                            sent_request = true;
                                            return ResultType::Continue;
                                        },
@@ -164,13 +184,14 @@ bool LocalProxy::get_response( const HTTPRequest & new_request, const string & s
                                                    MahimahiProtobufs::HTTPMessage response_to_send;
                                                    response_to_send.ParseFromString( res.second );
                                                    HTTPResponse first_res( response_to_send );
-                                                   //cout << "WROTE RESPONSE FOR: " << new_request.first_line() << " AT: " << timestamp() << endl;
                                                    client.write( first_res.str() );
                                                    request_parser.pop();
                                                    first_response = true;
                                                } else if ( not parsed_requests ) { /* it is the requests */
                                                    parsed_requests = true;
                                                    total_requests = add_bulk_requests( res.second, request_positions );
+                                                   bulk_done = true;
+                                                   notify();
                                                } else { /* it is a response */
                                                    //cout << "RECEIVED A RESPONSE AT: " << timestamp() << endl;
                                                    handle_response( res.second, request_positions, response_counter );
