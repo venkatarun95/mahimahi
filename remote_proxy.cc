@@ -47,10 +47,10 @@ string make_phantomjs_script( const MahimahiProtobufs::BulkRequest & incoming_re
         if ( curr_request.has_header( "Cookie" ) ) {
             custom_headers = "page.customHeaders = { 'Cookie': '" + curr_request.get_header_value( "Cookie" ) + "' };\n";
         }
-        cout << ( "data = '" + data + "';\nurl = '" + url + "';\n" + phantomjs_setup + custom_headers + phantomjs_load_post ) << endl;
+        //cout << ( "data = '" + data + "';\nurl = '" + url + "';\n" + phantomjs_setup + custom_headers + phantomjs_load_post ) << endl;
         return( "data = '" + data + "';\nurl = '" + url + "';\n" + phantomjs_setup + custom_headers + phantomjs_load_post );
     } else {
-        cout << ( "url = '" + url + "';\n" + phantomjs_setup + phantomjs_load ) << endl;
+        //cout << ( "url = '" + url + "';\n" + phantomjs_setup + phantomjs_load ) << endl;
         return( "url = '" + url + "';\n" + phantomjs_setup + phantomjs_load );
     }
 }
