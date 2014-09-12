@@ -23,6 +23,15 @@ private:
 
     Archive archive;
 
+    bool bulk_done;
+
+    bool req_sent;
+
+    std::mutex mutex_;
+    std::condition_variable cv_;
+
+    void wait( void );
+
     int add_bulk_requests( const std::string & bulk_requests, std::vector< std::pair< int, int > > & request_positions );
 
     void handle_response( const std::string & res, const std::vector< std::pair< int, int > > & request_positions, int & response_counter );
@@ -38,6 +47,8 @@ private:
 
 public:
     LocalProxy( const Address & listener_addr, const Address & remote_proxy_addr );
+
+    void notify( void ) { cv_.notify_all(); }
 
     Socket & tcp_listener( void ) { return listener_socket_; }
 
