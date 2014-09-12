@@ -56,7 +56,7 @@ public:
 
     void register_handlers( EventLoop & event_loop );
 
-    void serialize_to_socket( Socket && socket_output __attribute__ ((unused)) ) { printf("WARNING NOT IMPLEMENTED\n"); }
+    void serialize_to_socket( Socket && socket_output __attribute__ ((unused)) ) {}
 };
 
 #endif /* LOCAL_PROXY_HH */
