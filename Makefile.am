@@ -67,7 +67,7 @@ nph_replayserver_cgi_LDADD = protobufs/libhttprecordprotos.a -lrt $(protobuf_LIB
 nph_replayserver_cgi_LDFLAGS = -pthread
 
 bin_PROGRAMS += remote_proxy
-remote_proxy_SOURCES = $(common_source) $(http_server_source) $(http_source) $(http_recorder_source) $(bulk_message_source) remote_proxy.cc phantomjs_configuration.hh
+remote_proxy_SOURCES = $(common_source) $(http_server_source) $(http_source) $(http_recorder_source) $(bulk_message_source) remote_proxy.cc phantomjs_configuration.hh selenium_configuration.hh
 remote_proxy_LDADD = protobufs/libhttprecordprotos.a -lrt $(protobuf_LIBS) $(libssl_LIBS)
 remote_proxy_LDFLAGS = -pthread
 

@@ -19,6 +19,7 @@
 #include "length_value_parser.hh"
 #include "http_header.hh"
 #include "http_message.hh"
+#include "selenium_configuration.hh"
 
 using namespace std;
 using namespace PollerShortNames;
@@ -67,6 +68,26 @@ string make_phantomjs_script( const MahimahiProtobufs::BulkRequest & incoming_re
     }
 }
 
+string make_selenium_script( const MahimahiProtobufs::BulkRequest & incoming_request )
+{
+    /* Obtain scheme from BulkRequest protobuf */
+    string scheme = incoming_request.scheme() == MahimahiProtobufs::BulkRequest_Scheme_HTTPS
+                    ? "https" : "http";
+    /* Obtain hostname from http request within BulkRequest */
+    const HTTPRequest curr_request( incoming_request.request() );
+    string hostname = curr_request.get_header_value( "Host" );
+
+    /* Obtain path from http request within BulkRequest */
+    auto path_start = curr_request.first_line().find( "/" );
+    auto path_end = curr_request.first_line().find( " ", path_start );
+    string path = curr_request.first_line().substr( path_start, path_end - path_start );
+
+    /* Now concatenate the components into one URL */
+    string url = scheme + "://" + hostname + path;
+
+    return ( "site = \"" + url + "\"" + selenium_setup );
+}
+
 void handle_client( Socket && client, const int & veth_counter )
 {
     try {
@@ -98,16 +119,15 @@ void handle_client( Socket && client, const int & veth_counter )
 
         poller.add_action( Poller::Action( client, Direction::Out,
                                            [&] () {
-                                               /* Pass the incoming_request to phantomjs within a ProcessRecorder */
+                                               /* Pass the incoming_request to selenium within a ProcessRecorder */
                                                /* Block until it's done recording */
                                                process_recorder.record_process( []( FileDescriptor & parent_channel ) {
                                                                                 SystemCall( "dup2", dup2( parent_channel.num(), STDIN_FILENO ) );
-                                                                                return ezexec( { PHANTOMJS, "--ignore-ssl-errors=true",
-                                                                                                 "--ssl-protocol=TLSv1", "/dev/stdin" } );
+                                                                                return ezexec( { "/usr/bin/python", "/dev/stdin" } );
                                                                                 },
                                                                                 move( client ),
                                                                                 veth_counter,
-                                                                                make_phantomjs_script( incoming_request ) );
+                                                                                make_selenium_script( incoming_request ) );
                                                /* Write a null string to prevent poller from throwing an exception */
                                                client.write( "" );
                                                return Result::Type::Exit;
